@@ -11,15 +11,38 @@ GREEN='\033[0;32m'
 LIGHT_GREEN='\033[1;32m'
 NC='\033[0m' # No Color
 
-# --- License Info ---
-LICENSE_URL="https://raw.githubusercontent.com/Pemulaajiw/script/main/register2"
+# ─── License Info ───
+LICENSE_URL="https://raw.githubusercontent.com/arivpnstores/izin/main/ip2"
 LICENSE_INFO_FILE="/etc/zivpn/.license_info"
+CONFIG_DIR="/etc/zivpn"
+TELEGRAM_CONF="${CONFIG_DIR}/telegram.conf"
 
-# --- Pre-flight Checks ---
+# ─── Pre-flight Checks ───
 if [ "$(id -u)" -ne 0 ]; then
   echo "This script must be run as root. Please use sudo or run as root user." >&2
   exit 1
 fi
+
+function send_telegram_notification() {
+    local message="$1"
+    local keyboard="$2"
+
+    if [ ! -f "$TELEGRAM_CONF" ]; then
+        return 1
+    fi
+    # shellcheck source=/etc/zivpn/telegram.conf
+    source "$TELEGRAM_CONF"
+
+    if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+        local api_url="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"
+        if [ -n "$keyboard" ]; then
+            curl -s -X POST "$api_url" -d "chat_id=${TELEGRAM_CHAT_ID}" --data-urlencode "text=${message}" -d "reply_markup=${keyboard}" > /dev/null
+        else
+            curl -s -X POST "$api_url" -d "chat_id=${TELEGRAM_CHAT_ID}" --data-urlencode "text=${message}" -d "parse_mode=Markdown" > /dev/null
+        fi
+    fi
+}
+
 
 # --- License Verification Function ---
 function verify_license() {
@@ -156,14 +179,40 @@ function create_manual_account() {
             local EXPIRE_FORMATTED
             EXPIRE_FORMATTED=$(date -d "@$expiry_date" +"%d %B %Y")
             
-            clear
-            echo "🔹Informasi Akun zivpn Anda🔹"
-            echo "┌─────────────────────"
-            echo "│ Host: $HOST"
-            echo "│ Pass: $password"
-            echo "│ Expire: $EXPIRE_FORMATTED"
-            echo "└─────────────────────"
-            echo "♨ᵗᵉʳⁱᵐᵃᵏᵃˢⁱʰ ᵗᵉˡᵃʰ ᵐᵉⁿᵍᵍᵘⁿᵃᵏᵃⁿ ˡᵃʸᵃⁿᵃⁿ ᵏᵃᵐⁱ♨"
+ip=$(curl -4 -s ifconfig.me)
+isp=$(curl -s ipinfo.io | jq -r '.org // "N/A"')
+CERT_CN=$(openssl x509 -in /etc/zivpn/zivpn.crt -noout -subject | sed -n 's/.*CN = \([^,]*\).*/\1/p')
+local host
+if [ "$CERT_CN" == "zivpn" ]; then
+host=$(curl -4 -s ifconfig.me)
+else
+host=$CERT_CN
+fi
+clear
+echo "🔹 CREATE AKUN ZIVPN 🔹"
+echo "┌────────────────────────┐"
+echo "│ Host   : $host"
+echo "│ IP     : $ip"
+echo "│ ISP    : $isp"
+echo "│ Pass   : $password"
+echo "│ Expire : $EXPIRE_FORMATTED"
+echo "└────────────────────────┘"
+echo "♨ Terima kasih telah menggunakan layanan kami ♨"
+# ─── Notifikasi Telegram (CREATE) ───
+local message=$(cat <<EOF
+🔹 CREATE AKUN ZIVPN 🔹
+┌────────────────────────┐
+│ Host   : $host
+│ IP     : $ip
+│ ISP    : $isp
+│ Pass   : $password
+│ Expire : $days Days
+└────────────────────────┘
+♨ Terima kasih telah menggunakan layanan kami ♨
+EOF
+)
+
+send_telegram_notification "$message"
         fi
     else
         # If it failed, show the error message
@@ -270,14 +319,41 @@ function create_trial_account() {
             local EXPIRE_FORMATTED
             EXPIRE_FORMATTED=$(date -d "@$expiry_date" +"%d %B %Y %H:%M:%S")
             
-            clear
-            echo "🔹Informasi Akun zivpn Anda🔹"
-            echo "┌─────────────────────"
-            echo "│ Host: $HOST"
-            echo "│ Pass: $password"
-            echo "│ Expire: $EXPIRE_FORMATTED"
-            echo "└─────────────────────"
-            echo "♨ᵗᵉʳⁱᵐᵃᵏᵃˢⁱʰ ᵗᵉˡᵃʰ ᵐᵉⁿᵍᵍᵘⁿᵃᵏᵃⁿ ˡᵃʸᵃⁿᵃⁿ ᵏᵃᵐⁱ♨"
+ip=$(curl -4 -s ifconfig.me)
+isp=$(curl -s ipinfo.io | jq -r '.org // "N/A"')
+CERT_CN=$(openssl x509 -in /etc/zivpn/zivpn.crt -noout -subject | sed -n 's/.*CN = \([^,]*\).*/\1/p')
+local host
+if [ "$CERT_CN" == "zivpn" ]; then
+host=$(curl -4 -s ifconfig.me)
+else
+host=$CERT_CN
+fi            
+clear
+echo "🔹 TRIAL AKUN ZIVPN 🔹"
+echo "┌────────────────────────┐"
+echo "│ Host   : $host"
+echo "│ IP     : $ip"
+echo "│ ISP    : $isp"
+echo "│ Pass   : $password"
+echo "│ Expire : $EXPIRE_FORMATTED"
+echo "└────────────────────────┘"
+echo "♨ Terima kasih telah menggunakan layanan kami ♨"
+
+# ─── Notifikasi Telegram (TRIAL) ───
+local message=$(cat <<EOF
+🔹 TRIAL AKUN ZIVPN 🔹
+┌────────────────────────┐
+│ Host   : $host
+│ IP     : $ip
+│ ISP    : $isp
+│ Pass   : $password
+│ Expire : $minutes Minutes
+└────────────────────────┘
+♨ Terima kasih telah mencoba layanan kami ♨
+EOF
+)
+
+send_telegram_notification "$message"
         fi
     else
         echo "$result"
@@ -353,7 +429,40 @@ function renew_account() {
         new_expiry_date=$(echo "$user_line" | cut -d: -f2)
         local new_expiry_formatted
         new_expiry_formatted=$(date -d "@$new_expiry_date" +"%d %B %Y")
-        echo "Account '${password}' has been renewed. New expiry date: ${new_expiry_formatted}."
+ip=$(curl -4 -s ifconfig.me)
+isp=$(curl -s ipinfo.io | jq -r '.org // "N/A"')
+CERT_CN=$(openssl x509 -in /etc/zivpn/zivpn.crt -noout -subject | sed -n 's/.*CN = \([^,]*\).*/\1/p')
+local host
+if [ "$CERT_CN" == "zivpn" ]; then
+host=$(curl -4 -s ifconfig.me)
+else
+host=$CERT_CN
+fi
+clear
+echo "🔹 RENEW AKUN ZIVPN 🔹"
+echo "┌────────────────────────┐"
+echo "│ Host   : $host"
+echo "│ IP     : $ip"
+echo "│ ISP    : $isp"
+echo "│ Pass   : $password"
+echo "│ Expire : $new_expiry_formatted"
+echo "└────────────────────────┘"
+echo "♨ Terima kasih telah menggunakan layanan kami ♨"
+# ─── Notifikasi Telegram (RENEW) ───
+local message=$(cat <<EOF
+🔹 RENEW AKUN ZIVPN 🔹
+┌────────────────────────┐
+│ Host   : $host
+│ IP     : $ip
+│ ISP    : $isp
+│ Pass   : $password
+│ Expire : $new_expiry_formatted
+└────────────────────────┘
+♨ Terima kasih telah menggunakan layanan kami ♨
+EOF
+)
+
+send_telegram_notification "$message"
     else
         echo "$result"
     fi
@@ -386,8 +495,41 @@ function _delete_account_logic() {
         # Step 3: Atomically replace the old config with the new one
         mv "$tmp_config_file" "$config_file"
         
-        echo "Success: Account '${password}' deleted."
         restart_zivpn
+        ip=$(curl -4 -s ifconfig.me)
+isp=$(curl -s ipinfo.io | jq -r '.org // "N/A"')
+CERT_CN=$(openssl x509 -in /etc/zivpn/zivpn.crt -noout -subject | sed -n 's/.*CN = \([^,]*\).*/\1/p')
+local host
+if [ "$CERT_CN" == "zivpn" ]; then
+host=$(curl -4 -s ifconfig.me)
+else
+host=$CERT_CN
+fi
+clear
+echo "🔹 DELETE AKUN ZIVPN 🔹"
+echo "┌────────────────────────┐"
+echo "│ Host   : $host"
+echo "│ IP     : $ip"
+echo "│ ISP    : $isp"
+echo "│ Pass   : $password"
+echo "│ Status : Deleted"
+echo "└────────────────────────┘"
+echo "♨ Terima kasih telah menggunakan layanan kami ♨"
+# ─── Notifikasi Telegram (DELETE) ───
+local message=$(cat <<EOF
+🔹 DELETE AKUN ZIVPN 🔹
+┌────────────────────────┐
+│ Host   : $host
+│ IP     : $ip
+│ ISP    : $isp
+│ Pass   : $password
+│ Status : Deleted
+└────────────────────────┘
+♨ Terima kasih telah menggunakan layanan kami ♨
+EOF
+)
+
+send_telegram_notification "$message"
         return 0
     else
         # If config update fails, do not touch the db file and report error
