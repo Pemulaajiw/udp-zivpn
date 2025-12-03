@@ -12,7 +12,7 @@ LIGHT_GREEN='\033[1;32m'
 NC='\033[0m' # No Color
 
 # ─── License Info ───
-LICENSE_URL="https://raw.githubusercontent.com/arivpnstores/izin/main/ip2"
+LICENSE_URL="https://raw.githubusercontent.com/Pemulaajiw/script/main/register2"
 LICENSE_INFO_FILE="/etc/zivpn/.license_info"
 CONFIG_DIR="/etc/zivpn"
 TELEGRAM_CONF="${CONFIG_DIR}/telegram.conf"
@@ -1334,3 +1334,4 @@ function main() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
+
