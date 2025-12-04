@@ -888,7 +888,7 @@ echo "3. Hapus binary lama (jika ada)..."
 rm -f /usr/local/bin/zivpn
 
 echo "4. Download skrip resmi ZiVPN..."
-wget -O /root/zi.sh https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi.sh
+wget -O /root/zi.sh https://raw.githubusercontent.com/arivpnstores/udp-zivpn/main/zi.sh
 
 echo "5. Beri izin executable..."
 chmod +x /root/zi.sh
@@ -1334,4 +1334,5 @@ function main() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
+
 
